@@ -1,19 +1,18 @@
 import cv2
 import taichi as ti
 import taichi.math as tm
+import numpy as np
 
 ti.init(arch=ti.gpu, debug=True)
 
 grid = ti.Vector.field(2, dtype=ti.f32, shape=(512, 512, 128))
 # TODO: rename
 grid_blurred = ti.Vector.field(2, dtype=ti.f32, shape=(512, 512, 128))
-s_s, s_r = 4, 16
-
 weights = ti.field(dtype=ti.f32, shape=(2, 512), offset=(0, -256))
 
 
 @ti.func
-def compute_weight(i, radius, sigma):
+def compute_weights(i, radius, sigma):
     total = 0.0
 
     # Not much computation here - serialize the for loop to save two more GPU kernel launch costs
@@ -58,8 +57,8 @@ def bilateral_filter(img: ti.types.ndarray(), s_s: ti.i32, s_r: ti.i32,
              ti.round(j / s_s, ti.i32),
              ti.round(lum / s_r, ti.i32)] += tm.vec2(lum, 1)
 
-    compute_weight(0, ti.ceil(sigma_s * 3, int), sigma_s)
-    compute_weight(1, ti.ceil(sigma_r * 3, int), sigma_r)
+    compute_weights(0, ti.ceil(sigma_s * 3, int), sigma_s)
+    compute_weights(1, ti.ceil(sigma_r * 3, int), sigma_r)
 
     # Grid processing (blur)
     grid_n, grid_m = (img.shape[0] + s_s - 1) // s_s, (img.shape[1] + s_s -
@@ -100,20 +99,19 @@ def bilateral_filter(img: ti.types.ndarray(), s_s: ti.i32, s_r: ti.i32,
     for i, j in ti.ndrange(img.shape[0], img.shape[1]):
         lum = img[i, j]
         sample = sample_grid(i / s_s, j / s_s, lum / s_r)
-        # sample = grid_blurred[i // s_s, j // s_s, lum // s_r]
-
         img[i, j] = ti.u8(sample[0] / sample[1])
 
 
-src = cv2.imread('images/lenna_bw.png')[:, :, 0].copy()
+src = cv2.imread('images/mountain.jpg')[:, :].copy()
 
-gui = ti.GUI('Fast Bilateral Filtering')
+gui_res = 512
+gui = ti.GUI('Fast Bilateral Filtering', gui_res)
 s_s = gui.slider('s_s', 4, 50)
 s_r = gui.slider('s_r', 4, 32)
 sigma_s = gui.slider('sigma_s', 0.1, 5)
 sigma_r = gui.slider('sigma_r', 0.1, 5)
 
-s_s.value = 4
+s_s.value = 16
 s_r.value = 16
 
 sigma_s.value = 1
@@ -121,7 +119,13 @@ sigma_r.value = 1
 
 while gui.running and not gui.get_event(gui.ESCAPE):
     img = src.copy()
-    bilateral_filter(img, int(s_s.value), int(s_r.value), sigma_s.value,
-                     sigma_r.value)
-    gui.set_image(img)
+    channels = [img[:, :, c].copy() for c in range(3)]
+    for c in range(3):
+        bilateral_filter(channels[c], int(s_s.value), int(s_r.value),
+                         sigma_s.value, sigma_r.value)
+        img[:, :, c] = channels[c]
+    img = img.swapaxes(0, 1)[:, ::-1, ::-1]
+    img_padded = np.zeros(dtype=np.uint8, shape=(gui_res, gui_res, 3))
+    img_padded[:img.shape[0], :img.shape[1]] = img
+    gui.set_image(img_padded)
     gui.show()
