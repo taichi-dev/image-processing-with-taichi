@@ -7,10 +7,9 @@ ti.init(arch=ti.gpu, debug=True)
 grid = ti.Vector.field(2, dtype=ti.f32, shape=(512, 512, 128))
 # TODO: rename
 grid_blurred = ti.Vector.field(2, dtype=ti.f32, shape=(512, 512, 128))
-s_s, s_r = 10, 16
-sigma_s, sigma_r = 10, 10
+s_s, s_r = 4, 16
 
-weights = ti.field(dtype=ti.f32, shape=(2, 128), offset=(0, -64))
+weights = ti.field(dtype=ti.f32, shape=(2, 512), offset=(0, -256))
 
 
 @ti.func
@@ -21,7 +20,7 @@ def compute_weight(i, radius, sigma):
     ti.loop_config(serialize=True)
     for j in range(-radius, radius + 1):
         # Drop the normal distribution constant coefficients since we need to normalize later anyway
-        val = ti.exp(-0.5 * ((radius - j) / sigma)**2)
+        val = ti.exp(-0.5 * (j / sigma)**2)
         weights[i, j] = val
         total += val
 
@@ -48,26 +47,25 @@ def sample_grid(i, j, k):
 
 
 @ti.kernel
-def bilateral_filter(img: ti.types.ndarray()):
+def bilateral_filter(img: ti.types.ndarray(), s_s: ti.i32, s_r: ti.i32,
+                     sigma_s: ti.f32, sigma_r: ti.f32):
     # Reset the grid
-    print('Scattering', img.shape[0], img.shape[1])
     grid.fill(0)
+    grid_blurred.fill(0)
     for i, j in ti.ndrange(img.shape[0], img.shape[1]):
-        lum = int(img[i, j])
+        lum = img[i, j]
         grid[ti.round(i / s_s, ti.i32),
              ti.round(j / s_s, ti.i32),
              ti.round(lum / s_r, ti.i32)] += tm.vec2(lum, 1)
 
-    print('Compute blur weights')
-    compute_weight(0, sigma_s * 3, sigma_s)
-    compute_weight(1, sigma_r * 3, sigma_r)
+    compute_weight(0, ti.ceil(sigma_s * 3, int), sigma_s)
+    compute_weight(1, ti.ceil(sigma_r * 3, int), sigma_r)
 
-    print('Blurring')
     # Grid processing (blur)
     grid_n, grid_m = (img.shape[0] + s_s - 1) // s_s, (img.shape[1] + s_s -
                                                        1) // s_s
     grid_l = (255 + s_r - 1) // s_r
-    blur_radius = 3 * sigma_s
+    blur_radius = ti.ceil(sigma_s * 3, int)
 
     # Since grids store affine attributes, no need to normalize in the following three loops (will normalize in slicing anyway)
     for i, j, k in ti.ndrange(grid_n, grid_m, grid_l):
@@ -88,34 +86,42 @@ def bilateral_filter(img: ti.types.ndarray()):
 
         grid[i, j, k] = total
 
-    blur_radius = 3 * sigma_r
+    blur_radius = ti.ceil(sigma_r * 3, int)
     for i, j, k in ti.ndrange(grid_n, grid_m, grid_l):
         l_begin, l_end = max(0, k - blur_radius), min(grid_l,
                                                       k + blur_radius + 1)
         total = tm.vec2(0, 0)
         for l in range(l_begin, l_end):
-            total += grid[i, j, k] * weights[1, k - l]
+            total += grid[i, j, l] * weights[1, k - l]
 
         grid_blurred[i, j, k] = total
 
-    print('Slicing')
     # Slicing
     for i, j in ti.ndrange(img.shape[0], img.shape[1]):
-        lum = int(img[i, j])
+        lum = img[i, j]
         sample = sample_grid(i / s_s, j / s_s, lum / s_r)
+        # sample = grid_blurred[i // s_s, j // s_s, lum // s_r]
 
         img[i, j] = ti.u8(sample[0] / sample[1])
 
 
-img = cv2.imread('images/lenna_bw.png')[:, :, 0].copy()
-cv2.imshow('input', img)
-bilateral_filter(img)
-'''
-for i in range(30):
-    g = grid_blurred.to_numpy()[:, :, i]
-    cv2.imshow('grid', g[:, :, 0] / 255)
-    cv2.waitKey(1)
-'''
-cv2.imshow('filtered', img)
+src = cv2.imread('images/lenna_bw.png')[:, :, 0].copy()
 
-cv2.waitKey()
+gui = ti.GUI('Fast Bilateral Filtering')
+s_s = gui.slider('s_s', 4, 50)
+s_r = gui.slider('s_r', 4, 32)
+sigma_s = gui.slider('sigma_s', 0.1, 5)
+sigma_r = gui.slider('sigma_r', 0.1, 5)
+
+s_s.value = 4
+s_r.value = 16
+
+sigma_s.value = 1
+sigma_r.value = 1
+
+while gui.running and not gui.get_event(gui.ESCAPE):
+    img = src.copy()
+    bilateral_filter(img, int(s_s.value), int(s_r.value), sigma_s.value,
+                     sigma_r.value)
+    gui.set_image(img)
+    gui.show()
