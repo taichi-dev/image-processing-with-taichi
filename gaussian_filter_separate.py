@@ -2,7 +2,7 @@ import cv2
 import taichi as ti
 import taichi.math as tm
 
-ti.init(arch=ti.gpu, debug=True)
+ti.init(arch=ti.gpu)
 
 img_blurred = ti.Vector.field(3, dtype=ti.u8, shape=(1024, 1024))
 weights = ti.field(dtype=ti.f32, shape=1024, offset=-512)
