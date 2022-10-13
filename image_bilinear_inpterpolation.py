@@ -13,24 +13,19 @@ shape_s[0], shape_s[1] = h * scale, w * scale
 dst = np.zeros(shape_s, dtype=src.dtype)
 
 
-@ti.func
-def lerp(x, y, a):
-    return x * (1 - a) + y * a
-
-
 @ti.kernel
 def bilinear_interp(src: ti.types.ndarray(), dst: ti.types.ndarray()):
     for I in ti.grouped(dst):
         x, y = I.xy / scale
-        x1, y1 = int(x), int(y)  # Top-left corner coordinates
-        x2, y2 = min(x + 1,
-                     h - 1), min(y + 1,
-                                 w - 1)  # Bottom-right corner coordinates
-        R1 = lerp(src[tm.ivec3(x1, y1, I.z)], src[tm.ivec3(x1, y2, I.z)],
-                  y - y1)  # Top horizontal interp
-        R2 = lerp(src[tm.ivec3(x2, y1, I.z)], src[tm.ivec3(x2, y2, I.z)],
-                  y - y1)  # Bottom horizontal interp
-        dst[I] = ti.u8(ti.round(lerp(R1, R2, x - x1)))  # Vertical interp
+        x1, y1 = int(x), int(y)  # Bottom-left corner
+        x2, y2 = min(x + 1, h - 1), min(y + 1, w - 1)  # Top-right corner
+        Q11 = src[tm.ivec3(x1, y1, I.z)]
+        Q21 = src[tm.ivec3(x2, y1, I.z)]
+        Q12 = src[tm.ivec3(x1, y2, I.z)]
+        Q22 = src[tm.ivec3(x2, y2, I.z)]
+        R1 = tm.mix(Q11, Q21, x - x1)
+        R2 = tm.mix(Q12, Q22, x - x1)
+        dst[I] = ti.u8(ti.round(tm.mix(R1, R2, y - y1)))
 
 
 bilinear_interp(src, dst)
