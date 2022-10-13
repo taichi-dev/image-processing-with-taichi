@@ -13,17 +13,12 @@ filtered = np.zeros_like(gray)
 def gaussian_filter(src, sigma=1.5, size=5):
     gaussian_kernel = ti.field(float, (size, size))
     k = size // 2
-    cumsum = 0.0
-    for i, j in ti.ndrange(size, size):
-        x = i - k
-        y = j - k
-        gaussian_kernel[i, j] = ti.exp(-(x * x + y * y) / (2 * sigma * sigma))
-        gaussian_kernel[i, j] /= 2 * tm.pi * sigma * sigma
-        cumsum += gaussian_kernel[i, j]
-
-    for i, j in ti.ndrange(size, size):
-        gaussian_kernel[i, j] /= cumsum
-
+    gx = ti.Vector([
+        ti.exp(-z * z / (2 * sigma * sigma)) /
+        ti.sqrt(2 * tm.pi * sigma * sigma) for z in range(-k, k + 1)
+    ])
+    gk = gx.outer_product(gx)
+    gk /= gk.sum()
     h, w = src.shape[:2]
     dst_h = h - size + 1
     dst_w = w - size + 1
@@ -34,7 +29,7 @@ def gaussian_filter(src, sigma=1.5, size=5):
         h, w = src.shape[:2]
         for i, j in ti.ndrange(dst_h, dst_w):
             cumsum = 0.0
-            for ki, kj in gaussian_kernel:
+            for ki, kj in ti.static(ti.ndrange(size, size)):
                 cumsum += gaussian_kernel[ki, kj] * src[i + ki, j + kj]
 
             dst[i, j] = ti.u8(ti.round(cumsum))
