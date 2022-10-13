@@ -42,7 +42,7 @@ def gaussian_blur(img: ti.types.ndarray(element_dim=1), sigma: ti.f32):
             total_rgb += img[l, j] * w
             total_weight += w
 
-        img_blurred[i, j] = total_rgb / total_weight
+        img_blurred[i, j] = (total_rgb / total_weight).cast(ti.u8)
 
     for i, j in ti.ndrange(n, m):
         l_begin, l_end = max(0, j - blur_radius), min(m, j + blur_radius + 1)
@@ -53,7 +53,7 @@ def gaussian_blur(img: ti.types.ndarray(element_dim=1), sigma: ti.f32):
             total_rgb += img_blurred[i, l] * w
             total_weight += w
 
-        img[i, j] = total_rgb / total_weight
+        img[i, j] = (total_rgb / total_weight).cast(ti.u8)
 
 
 img = cv2.imread('images/mountain.jpg')
