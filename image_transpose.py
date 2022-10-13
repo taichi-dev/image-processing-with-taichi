@@ -11,7 +11,8 @@ dst = np.zeros(shape_t, dtype=src.dtype)
 
 
 @ti.kernel
-def transpose(src: ti.types.ndarray(element_dim=1), dst: ti.types.ndarray(element_dim=1)):
+def transpose(src: ti.types.ndarray(element_dim=1),
+              dst: ti.types.ndarray(element_dim=1)):
     for I in ti.grouped(src):
         dst[I.yx] = src[I]
 
