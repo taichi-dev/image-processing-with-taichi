@@ -72,14 +72,14 @@ def non_maximal_suppression(grad):
         for i, j in ti.ndrange((1, h - 1), (1, w - 1)):
             theta = dir[i, j]
             weight = ti.tan(theta)
-            if theta > tm.p4 / 4:
+            if theta > tm.pi / 4:
                 d1 = tm.ivec2(0, 1)
                 d2 = tm.ivec2(1, 1)
                 weight = 1 / weight
             elif theta >= 0:
                 d1 = tm.ivec2(1, 0)
                 d2 = tm.ivec2(1, 1)
-            elif theta >= -np.pi / 4:
+            elif theta >= -tm.pi / 4:
                 d1 = tm.ivec2(1, 0)
                 d2 = tm.ivec2(1, -1)
                 weight = 1 / weight
