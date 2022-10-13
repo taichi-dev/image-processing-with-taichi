@@ -11,14 +11,13 @@ filtered = np.zeros_like(gray)
 
 
 def gaussian_filter(src, sigma=1.5, size=5):
-    gaussian_kernel = ti.field(float, (size, size))
     k = size // 2
     gx = ti.Vector([
         ti.exp(-z * z / (2 * sigma * sigma)) /
         ti.sqrt(2 * tm.pi * sigma * sigma) for z in range(-k, k + 1)
     ])
-    gk = gx.outer_product(gx)
-    gk /= gk.sum()
+    gaussian_kernel = gx.outer_product(gx)
+    gaussian_kernel /= gaussian_kernel.sum()
     h, w = src.shape[:2]
     dst_h = h - size + 1
     dst_w = w - size + 1
