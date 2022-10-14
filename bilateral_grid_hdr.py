@@ -45,28 +45,35 @@ def sample_grid(i, j, k):
                                       int(k) + 1), tm.fract(k))
 
 
-log_luminance_scale = 3
+log_luminance_scale = 16
 
 
 @ti.func
 def log_luminance(c):
     lum = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
-    return max(min((ti.log(lum) / ti.log(2) * log_luminance_scale) + 36, 64),
+    return max(min((ti.log(lum) / ti.log(2) * log_luminance_scale) + 256, 256),
                0)
 
 
 @ti.kernel
 def bilateral_filter(img: ti.types.ndarray(element_dim=1), s_s: ti.i32,
                      s_r: ti.i32, sigma_s: ti.f32, sigma_r: ti.f32,
-                     blend: ti.f32):
+                     blend: ti.f32, alpha: ti.f32, beta: ti.f32):
     # Reset the grid
     grid.fill(0)
     grid_blurred.fill(0)
+
+    # min_log_lum, max_log_lum = 1e10, -1e10
+
     for i, j in ti.ndrange(img.shape[0], img.shape[1]):
         l = log_luminance(img[i, j])
         grid[ti.round(i / s_s, ti.i32),
              ti.round(j / s_s, ti.i32),
              ti.round(l / s_r, ti.i32)] += tm.vec2(l, 1)
+        # ti.atomic_min(min_log_lum, l)
+        # ti.atomic_max(max_log_lum, l)
+
+    # print(min_log_lum, max_log_lum)
 
     compute_weights(0, ti.ceil(sigma_s * 3, int), sigma_s)
     compute_weights(1, ti.ceil(sigma_r * 3, int), sigma_r)
@@ -112,24 +119,29 @@ def bilateral_filter(img: ti.types.ndarray(element_dim=1), s_s: ti.i32,
         sample = sample_grid(i / s_s, j / s_s, l / s_r)
         base = sample[0] / sample[1]
         detail = l - base
-        final_log_lum = base * 0.5 + 1 + detail
-        # linear_scale = ti.pow(2, (final_log_lum - l) / log_luminance_scale)
+        final_log_lum = alpha * base + beta + detail
+
         linear_scale = ti.pow(2, (final_log_lum - l) / log_luminance_scale)
+
         img[i, j] = tm.mix(img[i, j], img[i, j] * linear_scale, blend)
 
 
-src = cv2.imread('images/boston.png')[:, :].astype(np.float32) / (2**11)
+src = cv2.imread('images/cambridge.png')[:, :].astype(np.float32) / (2**10)
 src = src.swapaxes(0, 1)[:, ::-1, ::-1].copy()
 
-gui_res = 1200
+gui_res = (src.shape[0] + 200, src.shape[1])
 gui = ti.GUI('Fast Bilateral Filtering', gui_res)
 s_s = gui.slider('s_s', 4, 50)
-s_r = gui.slider('s_r', 4, 32)
 sigma_s = gui.slider('sigma_s', 0.1, 5)
+s_r = gui.slider('s_r', 4, 32)
 sigma_r = gui.slider('sigma_r', 0.1, 5)
+
 exposure = gui.slider('exposure value', -8, 8)
 blend = gui.slider('blend', 0, 1)
 gamma = gui.slider('gamma', 0.3, 3)
+
+alpha = gui.slider('alpha', 0.1, 2)
+beta = gui.slider('beta', -200, 200)
 
 s_s.value = 16
 s_r.value = 16
@@ -140,13 +152,15 @@ exposure.value = 1
 blend.value = 1
 gamma.value = 1
 
+alpha.value = 0.5
+beta.value = 125
+
 while gui.running and not gui.get_event(gui.ESCAPE):
     img = src.copy()
     bilateral_filter(img, int(s_s.value), int(s_r.value), sigma_s.value,
-                     sigma_r.value, blend.value)
-    img_padded = np.zeros(dtype=np.float32, shape=(gui_res, gui_res, 3))
+                     sigma_r.value, blend.value, alpha.value, beta.value)
+    img_padded = np.zeros(dtype=np.float32, shape=(gui_res[0], gui_res[1], 3))
     img_padded[:img.shape[0], :img.shape[1]] = np.minimum(
-        1.0,
-        img**(1 / gamma.value) * 2**exposure.value)
+        1.0, (img * 2**exposure.value)**(1 / gamma.value))
     gui.set_image(img_padded)
     gui.show()
