@@ -45,15 +45,20 @@ def sample_grid(i, j, k):
                                       int(k) + 1), tm.fract(k))
 
 
+log_luminance_scale = 3
+
+
 @ti.func
 def log_luminance(c):
     lum = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
-    return max(min((1 - ti.log(lum) / ti.log(2)) * 0.1, 1), 0)
+    return max(min((ti.log(lum) / ti.log(2) * log_luminance_scale) + 36, 64),
+               0)
 
 
 @ti.kernel
 def bilateral_filter(img: ti.types.ndarray(element_dim=1), s_s: ti.i32,
-                     s_r: ti.i32, sigma_s: ti.f32, sigma_r: ti.f32):
+                     s_r: ti.i32, sigma_s: ti.f32, sigma_r: ti.f32,
+                     blend: ti.f32):
     # Reset the grid
     grid.fill(0)
     grid_blurred.fill(0)
@@ -103,13 +108,18 @@ def bilateral_filter(img: ti.types.ndarray(element_dim=1), s_s: ti.i32,
 
     # Slicing
     for i, j in ti.ndrange(img.shape[0], img.shape[1]):
-        # sample = sample_grid(i / s_s, j / s_s, lum / s_r)
         l = log_luminance(img[i, j])
-        # img[i, j] = ti.u8(sample[0] / sample[1])
-        img[i, j] = tm.vec3(l)
+        sample = sample_grid(i / s_s, j / s_s, l / s_r)
+        base = sample[0] / sample[1]
+        detail = l - base
+        final_log_lum = base * 0.5 + 1 + detail
+        # linear_scale = ti.pow(2, (final_log_lum - l) / log_luminance_scale)
+        linear_scale = ti.pow(2, (final_log_lum - l) / log_luminance_scale)
+        img[i, j] = tm.mix(img[i, j], img[i, j] * linear_scale, blend)
 
 
-src = cv2.imread('images/boston.png')[:, :].astype(np.float32) / (2**13)
+src = cv2.imread('images/boston.png')[:, :].astype(np.float32) / (2**11)
+src = src.swapaxes(0, 1)[:, ::-1, ::-1].copy()
 
 gui_res = 1200
 gui = ti.GUI('Fast Bilateral Filtering', gui_res)
@@ -118,6 +128,8 @@ s_r = gui.slider('s_r', 4, 32)
 sigma_s = gui.slider('sigma_s', 0.1, 5)
 sigma_r = gui.slider('sigma_r', 0.1, 5)
 exposure = gui.slider('exposure value', -8, 8)
+blend = gui.slider('blend', 0, 1)
+gamma = gui.slider('gamma', 0.3, 3)
 
 s_s.value = 16
 s_r.value = 16
@@ -125,14 +137,16 @@ s_r.value = 16
 sigma_s.value = 1
 sigma_r.value = 1
 exposure.value = 1
+blend.value = 1
+gamma.value = 1
 
 while gui.running and not gui.get_event(gui.ESCAPE):
     img = src.copy()
     bilateral_filter(img, int(s_s.value), int(s_r.value), sigma_s.value,
-                     sigma_r.value)
-    img = img.swapaxes(0, 1)[:, ::-1]
+                     sigma_r.value, blend.value)
     img_padded = np.zeros(dtype=np.float32, shape=(gui_res, gui_res, 3))
     img_padded[:img.shape[0], :img.shape[1]] = np.minimum(
-        1.0, img * 2**exposure.value)**0.5
+        1.0,
+        img**(1 / gamma.value) * 2**exposure.value)
     gui.set_image(img_padded)
     gui.show()
