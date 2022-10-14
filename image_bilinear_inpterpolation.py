@@ -5,12 +5,10 @@ import taichi.math as tm
 
 ti.init()
 
-src = cv2.imread("./images/lenna_100x100.png")
-h, w = src.shape[:2]
+src = cv2.imread("./images/cat_96x64.jpg")
+h, w, c = src.shape
 scale = 5
-shape_s = list(src.shape)
-shape_s[0], shape_s[1] = h * scale, w * scale
-dst = np.zeros(shape_s, dtype=src.dtype)
+dst = np.zeros((h * scale, w * scale, c), dtype=src.dtype)
 
 
 @ti.kernel
@@ -30,4 +28,4 @@ def bilinear_interp(src: ti.types.ndarray(element_dim=1),
 
 
 bilinear_interp(src, dst)
-cv2.imwrite("bilinear_interpolation.png", dst)
+cv2.imwrite("cat_bilinear_interp.jpg", dst)

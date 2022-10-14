@@ -4,7 +4,7 @@ import taichi as ti
 
 ti.init()
 
-src = cv2.imread("./images/lenna.png")
+src = cv2.imread("./images/cat.jpg")
 shape_t = list(src.shape)
 shape_t[0], shape_t[1] = shape_t[1], shape_t[0]
 dst = np.zeros(shape_t, dtype=src.dtype)
@@ -18,4 +18,4 @@ def transpose(src: ti.types.ndarray(element_dim=1),
 
 
 transpose(src, dst)
-cv2.imwrite("lenna_transpose.png", dst)
+cv2.imwrite("cat_transpose.jpg", dst)
