@@ -1,8 +1,12 @@
 # (GPU) Image processing with Taichi
 
+Every Python file in this repo is runnable if you `pip3 install -U taichi opencv-python`.
+
+For example, if you run `python3 bilateral_grid_hdr.py`, you get the following UI:
+
 ![](images/bilateral_grid_hdr.jpg)
 
-### Enforcing code format
+### Developer note: enforcing code format
 
 We use the `pre-commit` Python package, which invokes `yapf` automatically format Python code.
 
