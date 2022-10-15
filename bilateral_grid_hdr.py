@@ -59,23 +59,17 @@ img2d = ti.types.ndarray(element_dim=1)
 
 @ti.kernel
 def bilateral_filter(img: img2d, s_s: ti.i32, s_r: ti.i32, sigma_s: ti.f32,
-                     sigma_r: ti.f32, blend: ti.f32, alpha: ti.f32,
-                     beta: ti.f32):
+                     sigma_r: ti.f32, exposure: ti.f32, blend: ti.f32,
+                     gamma: ti.f32, alpha: ti.f32, beta: ti.f32):
     # Reset the grid
     grid.fill(0)
     grid_blurred.fill(0)
-
-    # min_log_lum, max_log_lum = 1e10, -1e10
 
     for i, j in ti.ndrange(img.shape[0], img.shape[1]):
         l = log_luminance(img[i, j])
         grid[ti.round(i / s_s, ti.i32),
              ti.round(j / s_s, ti.i32),
              ti.round(l / s_r, ti.i32)] += tm.vec2(l, 1)
-        # ti.atomic_min(min_log_lum, l)
-        # ti.atomic_max(max_log_lum, l)
-
-    # print(min_log_lum, max_log_lum)
 
     compute_weights(0, ti.ceil(sigma_s * 3, int), sigma_s)
     compute_weights(1, ti.ceil(sigma_r * 3, int), sigma_r)
@@ -125,11 +119,12 @@ def bilateral_filter(img: img2d, s_s: ti.i32, s_r: ti.i32, sigma_s: ti.f32,
 
         linear_scale = ti.pow(2, (final_log_lum - l) / log_luminance_scale)
 
-        img[i, j] = tm.mix(img[i, j], img[i, j] * linear_scale, blend)
+        ldr = tm.mix(img[i, j], img[i, j] * linear_scale, blend)
+        ldr = min(1.0, ldr * 2**exposure)**(1 / gamma)
+        img[i, j] = ldr
 
 
-src = cv2.imread('images/cambridge_smaller.png')[:, :].astype(
-    np.float32) / (2**10)
+src = cv2.imread('images/cambridge_smaller.png').astype(np.float32) / (2**10)
 src = src.swapaxes(0, 1)[:, ::-1, ::-1].copy()
 
 gui_res = (src.shape[0] + 200, src.shape[1])
@@ -161,9 +156,9 @@ beta.value = 125
 while gui.running and not gui.get_event(gui.ESCAPE):
     img = src.copy()
     bilateral_filter(img, int(s_s.value), int(s_r.value), sigma_s.value,
-                     sigma_r.value, blend.value, alpha.value, beta.value)
+                     sigma_r.value, exposure.value, blend.value, gamma.value,
+                     alpha.value, beta.value)
     img_padded = np.zeros(dtype=np.float32, shape=(gui_res[0], gui_res[1], 3))
-    img_padded[:img.shape[0], :img.shape[1]] = np.minimum(
-        1.0, (img * 2**exposure.value)**(1 / gamma.value))
+    img_padded[:img.shape[0], :img.shape[1]] = img
     gui.set_image(img_padded)
     gui.show()
