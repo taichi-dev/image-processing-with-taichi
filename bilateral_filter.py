@@ -23,8 +23,7 @@ def bilateral_filter(img: ti.types.ndarray(element_dim=1), sigma_s: ti.f32,
         total_rgb = tm.vec3(0.0)
         total_weight = 0.0
         for k, l in ti.ndrange((k_begin, k_end), (l_begin, l_end)):
-            dist = ((i - k)**2 + (j - l)**2) / sigma_s**2 + (img[i, j].cast(
-                ti.f32) - img[k, l].cast(ti.f32)).norm_sqr() / sigma_r**2
+            dist = ((i - k)**2 + (j - l)**2) / sigma_s**2
             # No need to compute Gaussian coeffs here since we normalize in the end anyway
             w = ti.exp(-0.5 * dist)
             total_rgb += img[k, l] * w
@@ -36,8 +35,8 @@ def bilateral_filter(img: ti.types.ndarray(element_dim=1), sigma_s: ti.f32,
         img[i, j] = img_filtered[i, j]
 
 
-img = cv2.imread('images/mountain.jpg')
+img = cv2.imread('images/happy_face.png')
 cv2.imshow('input', img)
 bilateral_filter(img, 6, 30)
-cv2.imshow('blurred', img)
+cv2.imshow('Bilateral filtered', img)
 cv2.waitKey()

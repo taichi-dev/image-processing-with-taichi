@@ -132,7 +132,7 @@ src = cv2.imread('images/cambridge.png')[:, :].astype(np.float32) / (2**10)
 src = src.swapaxes(0, 1)[:, ::-1, ::-1].copy()
 
 gui_res = (src.shape[0] + 200, src.shape[1])
-gui = ti.GUI('Fast Bilateral Filtering', gui_res)
+gui = ti.GUI('Bilateral Grid HDR', gui_res)
 s_s = gui.slider('s_s', 4, 50)
 sigma_s = gui.slider('sigma_s', 0.1, 5)
 s_r = gui.slider('s_r', 4, 32)

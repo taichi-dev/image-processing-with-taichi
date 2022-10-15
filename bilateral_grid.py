@@ -104,10 +104,10 @@ def bilateral_filter(img: ti.types.ndarray(), s_s: ti.i32, s_r: ti.i32,
 src = cv2.imread('images/mountain.jpg')[:, :].copy()
 
 gui_res = 512
-gui = ti.GUI('Fast Bilateral Filtering', gui_res)
+gui = ti.GUI('Bilateral Grid', gui_res)
 s_s = gui.slider('s_s', 4, 50)
-s_r = gui.slider('s_r', 4, 32)
 sigma_s = gui.slider('sigma_s', 0.1, 5)
+s_r = gui.slider('s_r', 4, 32)
 sigma_r = gui.slider('sigma_r', 0.1, 5)
 
 s_s.value = 16
