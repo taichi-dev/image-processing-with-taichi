@@ -5,15 +5,16 @@ import taichi.math as tm
 
 ti.init()
 
-src = cv2.imread("./images/cat_96x64.jpg")
+src = cv2.imread("images/cat_96x64.jpg")
 h, w, c = src.shape
 scale = 5
 dst = np.zeros((h * scale, w * scale, c), dtype=src.dtype)
 
+img2d = ti.types.ndarray(element_dim=1)
+
 
 @ti.kernel
-def bilinear_interp(src: ti.types.ndarray(element_dim=1),
-                    dst: ti.types.ndarray(element_dim=1)):
+def bilinear_interp(src: img2d, dst: img2d):
     for I in ti.grouped(dst):
         x, y = I / scale
         x1, y1 = int(x), int(y)  # Bottom-left corner

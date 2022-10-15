@@ -6,7 +6,6 @@ import numpy as np
 ti.init(arch=ti.gpu, debug=True)
 
 grid = ti.Vector.field(2, dtype=ti.f32, shape=(512, 512, 128))
-# TODO: rename
 grid_blurred = ti.Vector.field(2, dtype=ti.f32, shape=(512, 512, 128))
 weights = ti.field(dtype=ti.f32, shape=(2, 512), offset=(0, -256))
 

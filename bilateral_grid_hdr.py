@@ -6,7 +6,6 @@ import numpy as np
 ti.init(arch=ti.gpu, debug=True)
 
 grid = ti.Vector.field(2, dtype=ti.f32, shape=(512, 512, 128))
-# TODO: rename
 grid_blurred = ti.Vector.field(2, dtype=ti.f32, shape=(512, 512, 128))
 weights = ti.field(dtype=ti.f32, shape=(2, 512), offset=(0, -256))
 
@@ -55,10 +54,13 @@ def log_luminance(c):
                0)
 
 
+img2d = ti.types.ndarray(element_dim=1)
+
+
 @ti.kernel
-def bilateral_filter(img: ti.types.ndarray(element_dim=1), s_s: ti.i32,
-                     s_r: ti.i32, sigma_s: ti.f32, sigma_r: ti.f32,
-                     blend: ti.f32, alpha: ti.f32, beta: ti.f32):
+def bilateral_filter(img: img2d, s_s: ti.i32, s_r: ti.i32, sigma_s: ti.f32,
+                     sigma_r: ti.f32, blend: ti.f32, alpha: ti.f32,
+                     beta: ti.f32):
     # Reset the grid
     grid.fill(0)
     grid_blurred.fill(0)
