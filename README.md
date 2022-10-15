@@ -1,6 +1,6 @@
 # (GPU) Image processing with Taichi
 
-
+![](images/bilateral_grid_hdr.jpg)
 
 ### Enforcing code format
 

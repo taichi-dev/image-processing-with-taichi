@@ -32,8 +32,8 @@ def gaussian_blur(img: img2d, sigma: ti.f32):
     img_blurred.fill(0)
     n, m = img.shape[0], img.shape[1]
 
-    compute_weights(ti.ceil(sigma * 3, int), sigma)
     blur_radius = ti.ceil(sigma * 3, int)
+    compute_weights(blur_radius, sigma)
 
     for i, j in ti.ndrange(n, m):
         l_begin, l_end = max(0, i - blur_radius), min(n, i + blur_radius + 1)
