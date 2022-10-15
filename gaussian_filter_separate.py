@@ -7,6 +7,8 @@ ti.init(arch=ti.gpu)
 img_blurred = ti.Vector.field(3, dtype=ti.u8, shape=(1024, 1024))
 weights = ti.field(dtype=ti.f32, shape=1024, offset=-512)
 
+img2d = ti.types.ndarray(element_dim=1)
+
 
 @ti.func
 def compute_weights(radius, sigma):
@@ -26,7 +28,7 @@ def compute_weights(radius, sigma):
 
 
 @ti.kernel
-def gaussian_blur(img: ti.types.ndarray(element_dim=1), sigma: ti.f32):
+def gaussian_blur(img: img2d, sigma: ti.f32):
     img_blurred.fill(0)
     n, m = img.shape[0], img.shape[1]
 
