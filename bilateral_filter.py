@@ -6,10 +6,11 @@ ti.init(arch=ti.gpu, debug=True)
 
 img_filtered = ti.Vector.field(3, dtype=ti.u8, shape=(1024, 1024))
 
+img2d = ti.types.ndarray(element_dim=1)
+
 
 @ti.kernel
-def bilateral_filter(img: ti.types.ndarray(element_dim=1), sigma_s: ti.f32,
-                     sigma_r: ti.f32):
+def bilateral_filter(img: img2d, sigma_s: ti.f32, sigma_r: ti.f32):
     n, m = img.shape[0], img.shape[1]
 
     blur_radius_s = ti.ceil(sigma_s * 3, int)

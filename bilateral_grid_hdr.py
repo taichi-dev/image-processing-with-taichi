@@ -128,7 +128,8 @@ def bilateral_filter(img: img2d, s_s: ti.i32, s_r: ti.i32, sigma_s: ti.f32,
         img[i, j] = tm.mix(img[i, j], img[i, j] * linear_scale, blend)
 
 
-src = cv2.imread('images/cambridge.png')[:, :].astype(np.float32) / (2**10)
+src = cv2.imread('images/cambridge_smaller.png')[:, :].astype(
+    np.float32) / (2**10)
 src = src.swapaxes(0, 1)[:, ::-1, ::-1].copy()
 
 gui_res = (src.shape[0] + 200, src.shape[1])
