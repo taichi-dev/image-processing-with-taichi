@@ -16,10 +16,10 @@ def bilateral_filter(img: img2d, sigma_s: ti.f32, sigma_r: ti.f32):
     blur_radius_s = ti.ceil(sigma_s * 3, int)
 
     for i, j in ti.ndrange(n, m):
-        k_begin, k_end = max(0,
-                             i - blur_radius_s), min(n, i + blur_radius_s + 1)
-        l_begin, l_end = max(0,
-                             j - blur_radius_s), min(m, j + blur_radius_s + 1)
+        k_begin, k_end = ti.max(0,
+                             i - blur_radius_s), ti.min(n, i + blur_radius_s + 1)
+        l_begin, l_end = ti.max(0,
+                             j - blur_radius_s), ti.min(m, j + blur_radius_s + 1)
 
         total_rgb = tm.vec3(0.0)
         total_weight = 0.0

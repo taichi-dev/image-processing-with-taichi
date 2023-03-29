@@ -18,7 +18,7 @@ def bilinear_interp(src: img2d, dst: img2d):
     for I in ti.grouped(dst):
         x, y = I / scale
         x1, y1 = int(x), int(y)  # Bottom-left corner
-        x2, y2 = min(x1 + 1, h - 1), min(y1 + 1, w - 1)  # Top-right corner
+        x2, y2 = ti.min(x1 + 1, h - 1), ti.min(y1 + 1, w - 1)  # Top-right corner
         Q11 = src[x1, y1]
         Q21 = src[x2, y1]
         Q12 = src[x1, y2]

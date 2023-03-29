@@ -67,7 +67,7 @@ def bilateral_filter(img: ti.types.ndarray(), s_s: ti.i32, s_r: ti.i32,
 
     # Since grids store affine attributes, no need to normalize in the following three loops (will normalize in slicing anyway)
     for i, j, k in ti.ndrange(grid_n, grid_m, grid_l):
-        l_begin, l_end = max(0, i - blur_radius), min(grid_n,
+        l_begin, l_end = ti.max(0, i - blur_radius), ti.min(grid_n,
                                                       i + blur_radius + 1)
         total = tm.vec2(0, 0)
         for l in range(l_begin, l_end):
@@ -76,7 +76,7 @@ def bilateral_filter(img: ti.types.ndarray(), s_s: ti.i32, s_r: ti.i32,
         grid_blurred[i, j, k] = total
 
     for i, j, k in ti.ndrange(grid_n, grid_m, grid_l):
-        l_begin, l_end = max(0, j - blur_radius), min(grid_m,
+        l_begin, l_end = ti.max(0, j - blur_radius), ti.min(grid_m,
                                                       j + blur_radius + 1)
         total = tm.vec2(0, 0)
         for l in range(l_begin, l_end):
@@ -86,7 +86,7 @@ def bilateral_filter(img: ti.types.ndarray(), s_s: ti.i32, s_r: ti.i32,
 
     blur_radius = ti.ceil(sigma_r * 3, int)
     for i, j, k in ti.ndrange(grid_n, grid_m, grid_l):
-        l_begin, l_end = max(0, k - blur_radius), min(grid_l,
+        l_begin, l_end = ti.max(0, k - blur_radius), ti.min(grid_l,
                                                       k + blur_radius + 1)
         total = tm.vec2(0, 0)
         for l in range(l_begin, l_end):

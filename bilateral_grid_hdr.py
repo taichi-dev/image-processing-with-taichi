@@ -50,11 +50,11 @@ log_luminance_scale = 16
 @ti.func
 def log_luminance(c):
     lum = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
-    return max(min((ti.log(lum) / ti.log(2) * log_luminance_scale) + 256, 256),
+    return ti.max(ti.min((ti.log(lum) / ti.log(2) * log_luminance_scale) + 256, 256),
                0)
 
 
-img2d = ti.types.ndarray(element_dim=1)
+img2d = ti.types.ndarray(dtype=ti.math.vec3, ndim=2)
 
 
 @ti.kernel
@@ -82,7 +82,7 @@ def bilateral_filter(img: img2d, s_s: ti.i32, s_r: ti.i32, sigma_s: ti.f32,
 
     # Since grids store affine attributes, no need to normalize in the following three loops (will normalize in slicing anyway)
     for i, j, k in ti.ndrange(grid_n, grid_m, grid_l):
-        l_begin, l_end = max(0, i - blur_radius), min(grid_n,
+        l_begin, l_end = ti.max(0, i - blur_radius), ti.min(grid_n,
                                                       i + blur_radius + 1)
         total = tm.vec2(0, 0)
         for l in range(l_begin, l_end):
@@ -91,7 +91,7 @@ def bilateral_filter(img: img2d, s_s: ti.i32, s_r: ti.i32, sigma_s: ti.f32,
         grid_blurred[i, j, k] = total
 
     for i, j, k in ti.ndrange(grid_n, grid_m, grid_l):
-        l_begin, l_end = max(0, j - blur_radius), min(grid_m,
+        l_begin, l_end = ti.max(0, j - blur_radius), ti.min(grid_m,
                                                       j + blur_radius + 1)
         total = tm.vec2(0, 0)
         for l in range(l_begin, l_end):
@@ -101,7 +101,7 @@ def bilateral_filter(img: img2d, s_s: ti.i32, s_r: ti.i32, sigma_s: ti.f32,
 
     blur_radius = ti.ceil(sigma_r * 3, int)
     for i, j, k in ti.ndrange(grid_n, grid_m, grid_l):
-        l_begin, l_end = max(0, k - blur_radius), min(grid_l,
+        l_begin, l_end = ti.max(0, k - blur_radius), ti.min(grid_l,
                                                       k + blur_radius + 1)
         total = tm.vec2(0, 0)
         for l in range(l_begin, l_end):
@@ -120,7 +120,7 @@ def bilateral_filter(img: img2d, s_s: ti.i32, s_r: ti.i32, sigma_s: ti.f32,
         linear_scale = ti.pow(2, (final_log_lum - l) / log_luminance_scale)
 
         ldr = tm.mix(img[i, j], img[i, j] * linear_scale, blend)
-        ldr = min(1.0, ldr * 2**exposure)**(1 / gamma)
+        ldr = ti.min(1.0, ldr * 2**exposure)**(1 / gamma)
         img[i, j] = ldr
 
 

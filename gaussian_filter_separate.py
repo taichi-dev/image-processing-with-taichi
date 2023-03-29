@@ -36,7 +36,7 @@ def gaussian_blur(img: img2d, sigma: ti.f32):
     compute_weights(blur_radius, sigma)
 
     for i, j in ti.ndrange(n, m):
-        l_begin, l_end = max(0, i - blur_radius), min(n, i + blur_radius + 1)
+        l_begin, l_end = ti.max(0, i - blur_radius), ti.min(n, i + blur_radius + 1)
         total_rgb = tm.vec3(0.0)
         total_weight = 0.0
         for l in range(l_begin, l_end):
@@ -47,7 +47,7 @@ def gaussian_blur(img: img2d, sigma: ti.f32):
         img_blurred[i, j] = (total_rgb / total_weight).cast(ti.u8)
 
     for i, j in ti.ndrange(n, m):
-        l_begin, l_end = max(0, j - blur_radius), min(m, j + blur_radius + 1)
+        l_begin, l_end = ti.max(0, j - blur_radius), ti.min(m, j + blur_radius + 1)
         total_rgb = tm.vec3(0.0)
         total_weight = 0.0
         for l in range(l_begin, l_end):
